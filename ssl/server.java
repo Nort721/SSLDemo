@@ -81,6 +81,10 @@ public class server {
                 System.out.println("replying to " + socket.getInetAddress().getHostAddress() + " -> " + reply);
                 output.println(reply);
 
+                // close everything when were done
+                output.close();
+                input.close();
+                socket.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
