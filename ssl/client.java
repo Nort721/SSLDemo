@@ -19,7 +19,7 @@ public class client {
             SSLSocketFactory factory = generateSocketFactory(SSL_PASSWORD.toCharArray());
             SSLSocket sslsocket = (SSLSocket) factory.createSocket(REMOTE_HOST,REMOTE_PORT);
 
-            // implicitly executing a handshake
+            // explicitly executing a handshake
             sslsocket.startHandshake();
 
             // What parameters were established?
