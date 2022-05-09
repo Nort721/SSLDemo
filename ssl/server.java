@@ -49,6 +49,11 @@ public class server {
         File serverKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("serverCertificate.jks").toURI());
         KeyStore serverKeyStore = KeyStore.getInstance(serverKeystoreFile, serverCertPassword.toCharArray());
 
+        // a testing certificates to see how it reacts when we use a fake certificate
+        String serverTestCertPassword = "iFuxZ7a8xChTbGCLK";
+        File serverTestKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("serverCertificate2.jks").toURI());
+        KeyStore serverTestKeyStore = KeyStore.getInstance(serverTestKeystoreFile, serverTestCertPassword.toCharArray());
+
         // Get the client's keystore
         String clientCertPassword = "fJpo3hC5N7DntUnv3";
         File clientKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("clientCertificate.jks").toURI());
@@ -71,6 +76,7 @@ public class server {
         // Setup the server's keystore
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509", "SunJSSE");
         keyManagerFactory.init(serverKeyStore, serverCertPassword.toCharArray());
+        //keyManagerFactory.init(serverTestKeyStore, serverTestCertPassword.toCharArray());
         X509KeyManager x509KeyManager = null;
         for (KeyManager keyManager : keyManagerFactory.getKeyManagers()) {
             if (keyManager instanceof X509KeyManager) {

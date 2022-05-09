@@ -12,6 +12,7 @@ public class client {
     private static final String REMOTE_HOST = "localhost";
     private static final int REMOTE_PORT = 1234;
 
+    // The hash of the certificate of our server
     private static final byte[]
             SERVER_PINNED_HASH = {-88, -120, -3, -84, 7, 116, -12, -12, -120, 57, -106, -27, 14, 79, 12, 87, 93, -60, 45, -81, 95, -34, 62, 39, 69, -28, 117, 27, -126, 12, -97, 1};
 
@@ -96,14 +97,16 @@ public class client {
                 // Use default trust manager to verify certificate chain
                 //defaultTrustManager.checkServerTrusted(chain, authType);
 
-                MessageDigest messageDigest;
+                MessageDigest messageDigest = null;
                 try {
                     messageDigest = MessageDigest.getInstance("SHA-256");
-                    if (!Arrays.equals(messageDigest.digest(chain[0].getEncoded()), SERVER_PINNED_HASH)) {
-                        throw new CertificateException("The provided server certificate does not match pinned certificate");
-                    }
-                } catch (NoSuchAlgorithmException | CertificateException e) {
+                } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
+                }
+
+                assert messageDigest != null;
+                if (!Arrays.equals(messageDigest.digest(chain[0].getEncoded()), SERVER_PINNED_HASH)) {
+                    throw new CertificateException("The provided server certificate does not match pinned certificate");
                 }
 
             }
