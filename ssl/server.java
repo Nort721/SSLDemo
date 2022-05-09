@@ -3,19 +3,15 @@ package com.nort721.server;
 import javax.net.ssl.*;
 import java.io.*;
 import java.security.KeyStore;
-import java.security.cert.X509Certificate;
 
 public class server {
 
     private static final int PORT = 1234;
-    private static final String CERT_PASSWORD = "HBTHDgsDSN3uwjFr5";
 
     // <---> security settings <--->
-    private static final boolean REQUIRE_CLIENT_AUTH = false;
+    private static final boolean REQUIRE_CLIENT_AUTH = true;
 
-    // <---> properties <--->
-    private static final boolean USING_SELF_SIGNED = true;
-
+    // entry point
     public static void main(String[] args) {
         new server();
     }
@@ -24,7 +20,7 @@ public class server {
 
         try {
 
-            SSLServerSocketFactory factory = generateServerFactory(CERT_PASSWORD.toCharArray());
+            SSLServerSocketFactory factory = generateServerFactory();
             SSLServerSocket sslserversocket = (SSLServerSocket) factory.createServerSocket(PORT);
             sslserversocket.setNeedClientAuth(REQUIRE_CLIENT_AUTH);
 
@@ -42,50 +38,55 @@ public class server {
 
     }
 
-    private SSLServerSocketFactory generateServerFactory(char[] password) throws Exception {
-        File myCert = new File("/Users/nort/All my files/Java projects/RSAServerDemo/serverCertificate.jks");
+    /**
+     * Generates a server socket factory that uses the server's certificate
+     * and whitelists the client one from the resources folder
+     * @return a custom SSLServerSocketFactory
+     */
+    private SSLServerSocketFactory generateServerFactory() throws Exception {
+        // Get the server's keystore
+        String serverCertPassword = "HBTHDgsDSN3uwjFr5";
+        File serverKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("serverCertificate.jks").toURI());
+        KeyStore serverKeyStore = KeyStore.getInstance(serverKeystoreFile, serverCertPassword.toCharArray());
 
-        KeyStore keyStore = KeyStore.getInstance(myCert, password);
+        // Get the client's keystore
+        String clientCertPassword = "fJpo3hC5N7DntUnv3";
+        File clientKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("clientCertificate.jks").toURI());
+        KeyStore clientKeyStore = KeyStore.getInstance(clientKeystoreFile, clientCertPassword.toCharArray());
 
-        TrustManager[] trustManagers;
-
-        if (REQUIRE_CLIENT_AUTH && USING_SELF_SIGNED) {
-
-            /*
-            Since we are currently self singing our certificates SSL can't really verify
-            them, so we have to accept all certificates, so enabling client auth may be
-            pointless, however it does increase security by a bit since some clients wouldn't
-            agree to auth at all so at least we filter those
-             */
-            // ToDo maybe we can accept the specific cert that all client jars will use on our com.nort721.server.server
-            // ToDo instead of accepting just any cert
-            trustManagers = new TrustManager[] {
-                    new X509TrustManager() {
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[0];
-                        }
-                        public void checkClientTrusted(
-                                java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-                        public void checkServerTrusted(
-                                java.security.cert.X509Certificate[] certs, String authType) {
-                        }
-                    }
-            };
-
-        } else {
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(keyStore);
-            trustManagers = trustManagerFactory.getTrustManagers();
+        // Whitelist the client's certificate on the generated servers
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("PKIX", "SunJSSE");
+        trustManagerFactory.init(clientKeyStore);
+        X509TrustManager x509TrustManager = null;
+        for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
+            if (trustManager instanceof X509TrustManager) {
+                x509TrustManager = (X509TrustManager) trustManager;
+                break;
+            }
         }
 
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("NewSunX509");
-        keyManagerFactory.init(keyStore, password);
+        // If the whitelisting gone wrong, throw an exception
+        if (x509TrustManager == null) throw new NullPointerException();
 
-        SSLContext context = SSLContext.getInstance("TLS");// "SSL" or "TLS"
-        context.init(keyManagerFactory.getKeyManagers(), trustManagers, null);
+        // Setup the server's keystore
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509", "SunJSSE");
+        keyManagerFactory.init(serverKeyStore, serverCertPassword.toCharArray());
+        X509KeyManager x509KeyManager = null;
+        for (KeyManager keyManager : keyManagerFactory.getKeyManagers()) {
+            if (keyManager instanceof X509KeyManager) {
+                x509KeyManager = (X509KeyManager) keyManager;
+                break;
+            }
+        }
 
-        return context.getServerSocketFactory();
+        // If setting up the server's keystore gone wrong, throw an exception
+        if (x509KeyManager == null) throw new NullPointerException();
+
+        // set up the SSL Context
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(new KeyManager[]{x509KeyManager}, new TrustManager[]{x509TrustManager}, null);
+
+        return sslContext.getServerSocketFactory();
     }
 
     // handle each socket client on separate thread
@@ -129,4 +130,5 @@ public class server {
             }
         }
     }
+
 }
