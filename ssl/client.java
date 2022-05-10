@@ -14,7 +14,7 @@ public class client {
 
     // The hash of the certificate of our server
     private static final byte[]
-            SERVER_PINNED_HASH = {-88, -120, -3, -84, 7, 116, -12, -12, -120, 57, -106, -27, 14, 79, 12, 87, 93, -60, 45, -81, 95, -34, 62, 39, 69, -28, 117, 27, -126, 12, -97, 1};
+            SERVER_CERTIFICATE_HASH_PINNED = {-88, -120, -3, -84, 7, 116, -12, -12, -120, 57, -106, -27, 14, 79, 12, 87, 93, -60, 45, -81, 95, -34, 62, 39, 69, -28, 117, 27, -126, 12, -97, 1};
 
     // entry point
     public static void main(String[] args) {
@@ -25,7 +25,7 @@ public class client {
 
         try {
 
-            SSLSocketFactory factory = generateSocketFactory();
+            SSLSocketFactory factory = getSocketFactory();
             SSLSocket sslsocket = (SSLSocket) factory.createSocket(REMOTE_HOST, REMOTE_PORT);
 
             // explicitly executing a handshake
@@ -54,11 +54,11 @@ public class client {
     }
 
     /**
-     * Generates a socket factory that uses the client's certificate
+     * Creates a socket factory that uses the client's certificate
      * and compares the received server certificate hash to our pinned hash
      * @return A custom SSLSocketFactory
      */
-    private SSLSocketFactory generateSocketFactory() throws Exception {
+    private SSLSocketFactory getSocketFactory() throws Exception {
         // Get the client's keystore
         String clientCertPassword = "fJpo3hC5N7DntUnv3";
         File clientKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("clientCertificate.jks").toURI());
@@ -80,6 +80,7 @@ public class client {
         }
 
         // Get hold of the default trust manager - will only return one as we only specified one algorithm above.
+        assert tmf != null;
         X509TrustManager defaultTrustManager = (X509TrustManager) tmf.getTrustManagers()[0];
 
         // Wrap it in your own class.
@@ -105,7 +106,7 @@ public class client {
                 }
 
                 assert messageDigest != null;
-                if (!Arrays.equals(messageDigest.digest(chain[0].getEncoded()), SERVER_PINNED_HASH)) {
+                if (!Arrays.equals(messageDigest.digest(chain[0].getEncoded()), SERVER_CERTIFICATE_HASH_PINNED)) {
                     throw new CertificateException("The provided server certificate does not match pinned certificate");
                 }
 

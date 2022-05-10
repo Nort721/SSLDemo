@@ -8,9 +8,6 @@ public class server {
 
     private static final int PORT = 1234;
 
-    // <---> security settings <--->
-    private static final boolean REQUIRE_CLIENT_AUTH = true;
-
     // entry point
     public static void main(String[] args) {
         new server();
@@ -20,9 +17,14 @@ public class server {
 
         try {
 
-            SSLServerSocketFactory factory = generateServerFactory();
+            SSLServerSocketFactory factory = getServerFactory();
             SSLServerSocket sslserversocket = (SSLServerSocket) factory.createServerSocket(PORT);
-            sslserversocket.setNeedClientAuth(REQUIRE_CLIENT_AUTH);
+
+            // we demand the client to authenticate
+            sslserversocket.setNeedClientAuth(true);
+
+            // defining what TLS versions we allow the server to use
+            sslserversocket.setEnabledProtocols(new String[]{"TLSv1.3", "TLSv1.2"});
 
             System.out.println("listening to secure connections . . .");
 
@@ -39,20 +41,20 @@ public class server {
     }
 
     /**
-     * Generates a server socket factory that uses the server's certificate
+     * Creates a server socket factory that uses the server's certificate
      * and whitelists the client one from the resources folder
      * @return a custom SSLServerSocketFactory
      */
-    private SSLServerSocketFactory generateServerFactory() throws Exception {
+    private SSLServerSocketFactory getServerFactory() throws Exception {
         // Get the server's keystore
         String serverCertPassword = "HBTHDgsDSN3uwjFr5";
         File serverKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("serverCertificate.jks").toURI());
         KeyStore serverKeyStore = KeyStore.getInstance(serverKeystoreFile, serverCertPassword.toCharArray());
 
         // a testing certificates to see how it reacts when we use a fake certificate
-        String serverTestCertPassword = "iFuxZ7a8xChTbGCLK";
-        File serverTestKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("serverCertificate2.jks").toURI());
-        KeyStore serverTestKeyStore = KeyStore.getInstance(serverTestKeystoreFile, serverTestCertPassword.toCharArray());
+//        String serverTestCertPassword = "iFuxZ7a8xChTbGCLK";
+//        File serverTestKeystoreFile = new File(ClassLoader.getSystemClassLoader().getResource("serverCertificate2.jks").toURI());
+//        KeyStore serverTestKeyStore = KeyStore.getInstance(serverTestKeystoreFile, serverTestCertPassword.toCharArray());
 
         // Get the client's keystore
         String clientCertPassword = "fJpo3hC5N7DntUnv3";
@@ -96,7 +98,7 @@ public class server {
     }
 
     // handle each socket client on separate thread
-    class ClientHandler extends Thread {
+    static class ClientHandler extends Thread {
 
         SSLSocket socket;
         BufferedReader input;
